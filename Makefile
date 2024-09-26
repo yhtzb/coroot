@@ -47,3 +47,11 @@ npm-lint:
 .PHONY: npm-fmt
 npm-fmt:
 	cd $(UI_PATH) && npm run fmt
+
+.PHONY: npm-build
+npm-build:
+	cd $(UI_PATH) && npm run build-prod
+
+.PHONY: docker
+docker: npm-build
+	docker build . -t registry.cn-beijing.aliyuncs.com/obser/coroot:latest
