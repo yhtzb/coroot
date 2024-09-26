@@ -3,9 +3,9 @@ RUN apt update && apt install -y liblz4-dev
 WORKDIR /tmp/src
 COPY go.mod .
 COPY go.sum .
-RUN go mod download
+RUN export GOPROXY='https://goproxy.cn' && go mod download
 COPY . .
-ARG VERSION=unknown
+ARG VERSION=latest
 RUN go build -mod=readonly -ldflags "-X main.version=$VERSION" -o coroot .
 
 
