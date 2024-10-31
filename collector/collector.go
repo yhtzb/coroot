@@ -21,7 +21,7 @@ import (
 const (
 	ApiKeyHeader = "X-API-Key"
 
-	batchLimit   = 10000
+	batchLimit   = 1000 // spans collecting batch size
 	batchTimeout = 5 * time.Second
 )
 

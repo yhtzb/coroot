@@ -101,6 +101,8 @@ type TracesBatch struct {
 	LinksAttributes    *chproto.ColArr[map[string]string]
 }
 
+// NewTracesBatch
+// argument limit stands for "batch size", argument timeout stands for "batch max period".
 func NewTracesBatch(limit int, timeout time.Duration, exec func(query ch.Query) error) *TracesBatch {
 	b := &TracesBatch{
 		limit: limit,
