@@ -17,7 +17,7 @@ services:
     volumes:
       - /tmp/coroot_data:/data
     ports:
-      - 8080:8080
+      - '127.0.0.1:8888:8888'  # This port is used as: Web UI, OTel collector.
     command:
       - '--data-dir=/data'
       - '--bootstrap-prometheus-url=http://prometheus:9090'
@@ -38,7 +38,7 @@ services:
       - /sys/fs/cgroup:/host/sys/fs/cgroup
       - /tmp/coroot_node_agent_data:/data
     command:
-      - '--collector-endpoint=http://coroot:8080'
+      - '--collector-endpoint=http://coroot:8888'
       - '--cgroupfs-root=/host/sys/fs/cgroup'
       - '--wal-dir=/data'
 

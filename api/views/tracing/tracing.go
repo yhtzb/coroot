@@ -111,10 +111,10 @@ func Render(ctx context.Context, ch *clickhouse.Client, app *model.Application, 
 	})
 
 	if len(otelServices) > 0 {
-		v.Sources = append(v.Sources, Source{Type: model.TraceSourceOtel, Name: "OpenTelemetry"})
+		v.Sources = append(v.Sources, Source{Type: model.TraceSourceOtel, Name: "OpenTelemetry SDK"})
 	}
 	if ebpfSpansFound {
-		v.Sources = append(v.Sources, Source{Type: model.TraceSourceAgent, Name: "OpenTelemetry (eBPF)"})
+		v.Sources = append(v.Sources, Source{Type: model.TraceSourceAgent, Name: "eBPF-based Agent"})
 	}
 
 	if len(v.Sources) == 0 {
@@ -127,9 +127,11 @@ func Render(ctx context.Context, ch *clickhouse.Client, app *model.Application, 
 	var spans []*model.TraceSpan
 	clients := map[spanKey]string{}
 	switch {
+	// 根据 trace_id 查询 spans。
 	case traceId != "":
 		spans, err = ch.GetSpansByTraceId(ctx, traceId)
 
+	// 根据 OTel SDK 的结果查询 spans。
 	case (source == "" || source == model.TraceSourceOtel) && otelService != "":
 		source = model.TraceSourceOtel
 		var ignoredPeerAddrs []string
@@ -179,6 +181,7 @@ func Render(ctx context.Context, ch *clickhouse.Client, app *model.Application, 
 		wg.Wait()
 		clients = getClientsByParentSpans(spans, parentSpans, w)
 
+	// 根据 eBPF Agent 的结果查询 spans。
 	case (source == "" || source == model.TraceSourceAgent) && ebpfSpansFound:
 		source = model.TraceSourceAgent
 		listens := getAppListens(app)
