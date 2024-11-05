@@ -1,23 +1,23 @@
 version: '3.8'
 
-name: coroot-local
+name: coroot
 
 volumes:
-  prometheus_data: { }
-  clickhouse_data: { }
-  clickhouse_logs: { }
-  coroot_data: { }
-  node_agent_data: { }
-  cluster_agent_data: { }
+  prometheus_data: {}
+  clickhouse_data: {}
+  clickhouse_logs: {}
+  coroot_data: {}
+  node_agent_data: {}
+  cluster_agent_data: {}
 
 services:
   coroot:
     restart: always
-    image: registry.cn-beijing.aliyuncs.com/obser/coroot:latest
+    image: ghcr.io/coroot/coroot
     volumes:
-      - /tmp/coroot_data:/data
+      - coroot_data:/data
     ports:
-      - '127.0.0.1:8888:8888'  # This port is used as: Web UI, OTel collector.
+      - 8080:8080
     command:
       - '--data-dir=/data'
       - '--bootstrap-prometheus-url=http://prometheus:9090'
@@ -27,26 +27,38 @@ services:
       - clickhouse
       - prometheus
 
-  coroot-node-agent:
+  node-agent:
     restart: always
-    image: registry.cn-beijing.aliyuncs.com/obser/coroot-node-agent:latest
+    image: ghcr.io/coroot/coroot-node-agent
     privileged: true
     pid: "host"
     volumes:
       - /sys/kernel/tracing:/sys/kernel/tracing
       - /sys/kernel/debug:/sys/kernel/debug
       - /sys/fs/cgroup:/host/sys/fs/cgroup
-      - /tmp/coroot_node_agent_data:/data
+      - node_agent_data:/data
     command:
-      - '--collector-endpoint=http://coroot:8888'
+      - '--collector-endpoint=http://coroot:8080'
       - '--cgroupfs-root=/host/sys/fs/cgroup'
       - '--wal-dir=/data'
+
+  cluster-agent:
+    restart: always
+    image: ghcr.io/coroot/coroot-cluster-agent
+    volumes:
+      - cluster_agent_data:/data
+    command:
+      - '--coroot-url=http://coroot:8080'
+      - '--metrics-scrape-interval=15s'
+      - '--metrics-wal-dir=/data'
+    depends_on:
+      - coroot
 
   prometheus:
     restart: always
     image: prom/prometheus:v2.45.4
     volumes:
-      - /tmp/coroot_prometheus_data:/prometheus
+      - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -61,11 +73,10 @@ services:
     restart: always
     image: clickhouse/clickhouse-server:24.3
     volumes:
-      - /tmp/coroot_clickhouse_data:/var/lib/clickhouse
-      - /tmp/coroot_clickhouse_logs:/var/log/clickhouse-server
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
     ports:
       - '127.0.0.1:9000:9000'
-      - '127.0.0.1:8123:8123'
     ulimits:
       nofile:
         soft: 262144

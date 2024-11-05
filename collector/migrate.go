@@ -184,7 +184,22 @@ FROM otel_traces
 WHERE TraceId!=''
 GROUP BY TraceId`,
 
+		// 物化列 NetSockPeerAddr 从 SpanAttributes 中提取。
 		`ALTER TABLE otel_traces @on_cluster ADD COLUMN IF NOT EXISTS NetSockPeerAddr LowCardinality(String) MATERIALIZED SpanAttributes['net.sock.peer.addr'] CODEC(ZSTD(1))`,
+
+		// 新建 l7_events_ss 表
+		`
+CREATE TABLE IF NOT EXISTS l7_events_ss @on_cluster (
+     Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
+     Duration UInt64 CODEC(ZSTD(1)),
+     TgidRead UInt64 CODEC(ZSTD(1)),
+     TgidWrite UInt64 CODEC(ZSTD(1)),
+     StatementId UInt32 CODEC(ZSTD(1))
+    )
+ENGINE MergeTree()
+TTL toDateTime(Timestamp) + toIntervalDay(@ttl_days)
+PARTITION BY toDate(Timestamp)
+ORDER BY (toUnixTimestamp(Timestamp))`,
 
 		`
 CREATE TABLE IF NOT EXISTS profiling_stacks @on_cluster (
