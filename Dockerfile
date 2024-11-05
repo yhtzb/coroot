@@ -10,7 +10,7 @@ RUN go build -mod=readonly -ldflags "-X main.version=$VERSION" -o coroot .
 
 
 FROM debian:bullseye
-RUN apt update && apt install -y ca-certificates && apt clean
+RUN apt update && apt install -y ca-certificates
 
 COPY --from=backend-builder /tmp/src/coroot /usr/bin/coroot
 
