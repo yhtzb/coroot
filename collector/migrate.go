@@ -52,6 +52,7 @@ func (c *Collector) migrate(ctx context.Context, cfg *db.IntegrationClickhouse) 
 
 var (
 	tables = []string{
+		// 新建表 otel_logs。
 		`
 CREATE TABLE IF NOT EXISTS otel_logs (
      Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
@@ -77,6 +78,7 @@ ORDER BY (ServiceName, SeverityText, toUnixTimestamp(Timestamp), TraceId)
 SETTINGS index_granularity=8192, ttl_only_drop_parts = 1
 `,
 
+		// 新建表 otel_traces。
 		`
 CREATE TABLE IF NOT EXISTS otel_traces (
      Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
@@ -115,6 +117,7 @@ PARTITION BY toDate(Timestamp)
 ORDER BY (ServiceName, SpanName, toUnixTimestamp(Timestamp), TraceId)
 SETTINGS index_granularity=8192, ttl_only_drop_parts = 1`,
 
+		// 新建表 otel_traces_trace_id_ts。
 		`
 CREATE TABLE IF NOT EXISTS otel_traces_trace_id_ts (
      TraceId String CODEC(ZSTD(1)),
@@ -126,6 +129,7 @@ TTL toDateTime(Start) + toIntervalDay(@ttl_days)
 ORDER BY (TraceId, toUnixTimestamp(Start))
 SETTINGS index_granularity=8192`,
 
+		// 新建物化视图 otel_traces_trace_id_ts_mv，为 otel_traces_trace_id_ts 维护 min/max range。
 		`
 CREATE MATERIALIZED VIEW IF NOT EXISTS otel_traces_trace_id_ts_mv TO otel_traces_trace_id_ts AS
 SELECT 
@@ -136,10 +140,7 @@ FROM otel_traces
 WHERE TraceId!=''
 GROUP BY TraceId`,
 
-		// 物化列 NetSockPeerAddr 从 SpanAttributes 中提取。
-		`ALTER TABLE otel_traces ADD COLUMN IF NOT EXISTS NetSockPeerAddr LowCardinality(String) MATERIALIZED SpanAttributes['net.sock.peer.addr'] CODEC(ZSTD(1))`,
-
-		// 新建 l7_events_ss 表
+		// 新建表 l7_events_ss。
 		`
 CREATE TABLE IF NOT EXISTS l7_events_ss (
      Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
@@ -153,6 +154,7 @@ TTL toDateTime(Timestamp) + toIntervalDay(@ttl_days)
 PARTITION BY toDate(Timestamp)
 ORDER BY (toUnixTimestamp(Timestamp))`,
 
+		// 新建表 profiling_stacks。
 		`
 CREATE TABLE IF NOT EXISTS profiling_stacks (
 	ServiceName LowCardinality(String) CODEC(ZSTD(1)),
@@ -166,6 +168,7 @@ TTL toDateTime(LastSeen) + toIntervalDay(@ttl_days)
 PARTITION BY toDate(LastSeen)
 ORDER BY (ServiceName, Hash)`,
 
+		// 新建表 profiling_samples。
 		`
 CREATE TABLE IF NOT EXISTS profiling_samples (
 	ServiceName LowCardinality(String) CODEC(ZSTD(1)),
@@ -180,6 +183,7 @@ TTL toDateTime(Start) + toIntervalDay(@ttl_days)
 PARTITION BY toDate(Start)
 ORDER BY (ServiceName, Type, toUnixTimestamp(Start), toUnixTimestamp(End))`,
 
+		// 新建表 profiling_profiles。
 		`
 CREATE TABLE IF NOT EXISTS profiling_profiles (
     ServiceName LowCardinality(String) CODEC(ZSTD(1)),
@@ -191,6 +195,7 @@ PRIMARY KEY (ServiceName, Type)
 TTL toDateTime(LastSeen) + toIntervalDay(@ttl_days)
 PARTITION BY toDate(LastSeen)`,
 
+		// 新建物化视图 profiling_profiles_mv，为 profiling_profiles 维护 max range。
 		`
 CREATE MATERIALIZED VIEW IF NOT EXISTS profiling_profiles_mv TO profiling_profiles AS
 SELECT ServiceName, Type, max(End) AS LastSeen FROM profiling_samples group by ServiceName, Type`,

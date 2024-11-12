@@ -155,13 +155,16 @@ func (b *TracesBatch) Add(req *v1.ExportTraceServiceRequest) {
 	defer b.lock.Unlock()
 
 	for _, rs := range req.GetResourceSpans() {
+		// 物化 ServiceName。
 		var serviceName string
+		// 得到 ResourceAttributes。
 		resourceAttributes := attributesToMap(rs.GetResource().GetAttributes())
 		for k, v := range resourceAttributes {
 			if k == semconv.AttributeServiceName {
 				serviceName = v
 			}
 		}
+		// 得到 SpanAttributes。
 		for _, ss := range rs.GetScopeSpans() {
 			scopeName := ss.GetScope().GetName()
 			scopeVersion := ss.GetScope().GetVersion()
