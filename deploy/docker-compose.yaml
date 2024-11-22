@@ -67,6 +67,7 @@ services:
     volumes:
       - /tmp/coroot_clickhouse_data:/var/lib/clickhouse
       - /tmp/coroot_clickhouse_logs:/var/log/clickhouse-server
+      - ./clickhouse-server-config.xml:/etc/clickhouse-server/config.xml
     ports:
       - '127.0.0.1:9000:9000'
       - '127.0.0.1:8123:8123'
@@ -74,3 +75,42 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+
+  # 以下为被测应用。
+  redis:
+    image: bitnami/redis:4.0.9
+    environment:
+      ALLOW_EMPTY_PASSWORD: 'yes'
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.6
+    ports:
+      - 16686:16686
+
+  foo-svc:
+    image: chanjarster/spring-boot-istio-jaeger-demo-foo-svc:0.1.0
+    environment:
+      JAEGER_UDP_SENDER_HOST: jaeger
+    ports:
+      - 8080:8080
+    links:
+      - bar-svc
+      - redis
+      - jaeger
+
+  bar-svc:
+    image: chanjarster/spring-boot-istio-jaeger-demo-bar-svc:0.1.0
+    environment:
+      JAEGER_UDP_SENDER_HOST: jaeger
+    links:
+      - loo-svc
+      - redis
+      - jaeger
+
+  loo-svc:
+    image: chanjarster/spring-boot-istio-jaeger-demo-loo-svc:0.1.0
+    environment:
+      JAEGER_UDP_SENDER_HOST: jaeger
+    links:
+      - redis
+      - jaeger

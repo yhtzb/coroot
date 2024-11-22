@@ -145,8 +145,9 @@ GROUP BY TraceId`,
 CREATE TABLE IF NOT EXISTS l7_events_ss (
      Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
      Duration UInt64 CODEC(ZSTD(1)),
-     TgidRead UInt64 CODEC(ZSTD(1)),
-     TgidWrite UInt64 CODEC(ZSTD(1)),
+     ContainerId LowCardinality(String) CODEC(ZSTD(1)),
+     TgidRead LowCardinality(String) CODEC(ZSTD(1)),
+     TgidWrite LowCardinality(String) CODEC(ZSTD(1)),
      StatementId UInt32 CODEC(ZSTD(1))
     )
 ENGINE MergeTree()
