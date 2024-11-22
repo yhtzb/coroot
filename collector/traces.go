@@ -76,8 +76,8 @@ type TracesBatch struct {
 	limit int
 	exec  func(query ch.Query) error
 
-	lock sync.Mutex
-	done chan struct{}
+	addLock sync.Mutex
+	done    chan struct{}
 
 	Timestamp          *chproto.ColDateTime64
 	TraceId            *chproto.ColStr
@@ -139,9 +139,9 @@ func NewTracesBatch(limit int, timeout time.Duration, exec func(query ch.Query) 
 			case <-b.done:
 				return
 			case <-ticker.C:
-				b.lock.Lock()
+				b.addLock.Lock()
 				b.save()
-				b.lock.Unlock()
+				b.addLock.Unlock()
 			}
 		}
 	}()
@@ -151,14 +151,14 @@ func NewTracesBatch(limit int, timeout time.Duration, exec func(query ch.Query) 
 
 func (b *TracesBatch) Close() {
 	b.done <- struct{}{}
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	b.addLock.Lock()
+	defer b.addLock.Unlock()
 	b.save()
 }
 
 func (b *TracesBatch) Add(req *v1.ExportTraceServiceRequest) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	b.addLock.Lock()
+	defer b.addLock.Unlock()
 
 	for _, rs := range req.GetResourceSpans() {
 		// 物化 ServiceName。
