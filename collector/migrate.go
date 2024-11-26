@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS otel_logs @on_cluster (
 ) ENGINE @merge_tree
 TTL toDateTime(Timestamp) + toIntervalDay(@ttl_days)
 PARTITION BY toDate(Timestamp)
-ORDER BY (ServiceName, SeverityText, toUnixTimestamp(Timestamp), TraceId)
+ORDER BY (ServiceName, SeverityText, toUnixTimestamp(Timestamp))
 SETTINGS index_granularity=8192, ttl_only_drop_parts = 1
 `,
 
@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS otel_traces @on_cluster (
 ) ENGINE @merge_tree
 TTL toDateTime(Timestamp) + toIntervalDay(@ttl_days)
 PARTITION BY toDate(Timestamp)
-ORDER BY (ServiceName, SpanName, toUnixTimestamp(Timestamp), TraceId)
+ORDER BY (ServiceName, SpanName, toUnixTimestamp(Timestamp))
 SETTINGS index_granularity=8192, ttl_only_drop_parts = 1`,
 
 		// 新建表 otel_traces_trace_id_ts。
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS otel_traces_trace_id_ts @on_cluster (
      INDEX idx_trace_id TraceId TYPE bloom_filter(0.01) GRANULARITY 1
 ) ENGINE @merge_tree
 TTL toDateTime(Start) + toIntervalDay(@ttl_days)
-ORDER BY (TraceId, toUnixTimestamp(Start))
+ORDER BY (toUnixTimestamp(Start))
 SETTINGS index_granularity=8192`,
 
 		// 新建物化视图 otel_traces_trace_id_ts_mv，为 otel_traces_trace_id_ts 维护 min/max range。
