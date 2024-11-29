@@ -49,7 +49,6 @@ services:
     restart: always
     image: prom/prometheus:v2.45.4
     volumes:
-      # Firstly `chmod 777 -R /D/tmp/coroot/clickhouse_data`
       - /D/tmp/coroot/prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -75,3 +74,40 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+
+  # 以下为被测应用负载。
+  jaeger:
+    image: jaegertracing/all-in-one:1.6
+    ports:
+      - 16686:16686
+
+  redis:
+    image: registry.cn-beijing.aliyuncs.com/obser/redis:4.0.9
+    environment:
+      ALLOW_EMPTY_PASSWORD: 'yes'
+
+  foo-svc:
+    image: registry.cn-beijing.aliyuncs.com/obser/foo-svc:0.1.0
+    environment:
+      JAEGER_UDP_SENDER_HOST: jaeger
+    ports:
+      - 8080:8080
+    links:
+      - redis
+      - jaeger
+
+  bar-svc:
+    image: registry.cn-beijing.aliyuncs.com/obser/bar-svc:0.1.0
+    environment:
+      JAEGER_UDP_SENDER_HOST: jaeger
+    links:
+      - redis
+      - jaeger
+
+  loo-svc:
+    image: registry.cn-beijing.aliyuncs.com/obser/loo-svc:0.1.0
+    environment:
+      JAEGER_UDP_SENDER_HOST: jaeger
+    links:
+      - redis
+      - jaeger
