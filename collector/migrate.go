@@ -117,6 +117,11 @@ PARTITION BY toDate(Timestamp)
 ORDER BY (ServiceName, SpanName, toUnixTimestamp(Timestamp))
 SETTINGS index_granularity=8192, ttl_only_drop_parts = 1`,
 
+		// 新建物化列 NetSockPeerAddr。
+		`
+ALTER TABLE otel_traces ADD COLUMN IF NOT EXISTS NetSockPeerAddr LowCardinality(String) 
+MATERIALIZED concat(SpanAttributes['net.peer.name'], ':', SpanAttributes['net.peer.port']) CODEC(ZSTD(1))`,
+
 		// 新建表 otel_traces_trace_id_ts。
 		`
 CREATE TABLE IF NOT EXISTS otel_traces_trace_id_ts (
@@ -144,7 +149,7 @@ GROUP BY TraceId`,
 		`
 CREATE TABLE IF NOT EXISTS l7_events_ss (
      Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
-     Duration UInt64 CODEC(ZSTD(1)),
+     Duration Int64 CODEC(ZSTD(1)),
      ContainerId LowCardinality(String) CODEC(ZSTD(1)),
      TgidRead LowCardinality(String) CODEC(ZSTD(1)),
      TgidWrite LowCardinality(String) CODEC(ZSTD(1)),
@@ -198,7 +203,7 @@ PARTITION BY toDate(LastSeen)`,
 
 		// 新建物化视图 profiling_profiles_mv，为 profiling_profiles 维护 max range。
 		`
-CREATE MATERIALIZED VIEW IF NOT EXISTS profiling_profiles_mv TO profiling_profiles AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS profiling_profiles_mv TO profiling_profiles AS 
 SELECT ServiceName, Type, max(End) AS LastSeen FROM profiling_samples group by ServiceName, Type`,
 	}
 )

@@ -705,7 +705,7 @@ func (q SpanQuery) RootSpansFilter() ([]string, []any) {
 	}
 	var args []any
 	if len(q.ExcludePeerAddrs) > 0 {
-		filter = append(filter, "SpanAttributes['net.sock.peer.addr'] NOT IN (@addrs)")
+		filter = append(filter, "NetSockPeerAddr NOT IN (@addrs)")
 		args = append(args, clickhouse.Named("addrs", q.ExcludePeerAddrs))
 	}
 	return filter, args
@@ -713,14 +713,14 @@ func (q SpanQuery) RootSpansFilter() ([]string, []any) {
 
 func (q SpanQuery) SpansByServiceNameFilter() ([]string, []any) {
 	filter := []string{
-		"SpanKind = 'SPAN_KIND_SERVER'",
+		"SpanKind = 'SPAN_KIND_SERVER'", // SPAN_KIND_SERVER 无法来自 eBPF Agent。
 	}
 	for _, f := range q.Filters {
 		filter = append(filter, f.String())
 	}
 	var args []any
 	if len(q.ExcludePeerAddrs) > 0 {
-		filter = append(filter, "SpanAttributes['net.sock.peer.addr'] NOT IN (@addrs)")
+		filter = append(filter, "NetSockPeerAddr NOT IN (@addrs)")
 		args = append(args, clickhouse.Named("addrs", q.ExcludePeerAddrs))
 	}
 	return filter, args
@@ -739,7 +739,7 @@ func inboundSpansFilter(clients []string, listens []model.Listen) ([]string, []a
 	}
 	filter := []string{
 		"ServiceName IN (@services)",
-		"(SpanAttributes['net.peer.name'] IN (@ips) OR SpanAttributes['net.sock.peer.addr'] IN (@addrs))",
+		"(SpanAttributes['net.peer.name'] IN (@ips) OR NetSockPeerAddr IN (@addrs))",
 	}
 	args := []any{
 		clickhouse.Named("services", clients),
