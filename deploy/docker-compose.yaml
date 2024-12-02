@@ -45,6 +45,14 @@ services:
     depends_on:
       - clickhouse
 
+  coroot-tracing-algo:
+    restart: always
+    image: registry.cn-beijing.aliyuncs.com/obser/coroot-tracing-algo:latest
+    ports:
+      - '127.0.0.1:4200:4200'
+    depends_on:
+      - clickhouse
+
   prometheus:
     restart: always
     image: prom/prometheus:v2.45.4
