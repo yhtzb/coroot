@@ -13,11 +13,12 @@ volumes:
 services:
   coroot:
     restart: always
-    image: registry.cn-beijing.aliyuncs.com/obser/coroot:latest
+    image: registry.cn-beijing.aliyuncs.com/obser/coroot:debug
     volumes:
       - /D/tmp/coroot/coroot_data:/data
     ports:
       - '127.0.0.1:8888:8888'  # This port is used as: Web UI, OTel collector.
+      - '127.0.0.1:40000:40000' # For DLV
     command:
       - '--data-dir=/data'
       - '--bootstrap-prometheus-url=http://prometheus:9090'
