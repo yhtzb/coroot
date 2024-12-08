@@ -1,6 +1,6 @@
 version: '3.8'
 
-name: coroot-local
+name: localhost
 
 volumes:
   prometheus_data: { }
@@ -75,7 +75,6 @@ services:
     volumes:
       - /D/tmp/coroot/clickhouse_data:/var/lib/clickhouse
       - /D/tmp/coroot/clickhouse_logs:/var/log/clickhouse-server
-      - ./clickhouse-server-config.xml:/etc/clickhouse-server/config.xml
     ports:
       - '127.0.0.1:9000:9000'
       - '127.0.0.1:8123:8123'
