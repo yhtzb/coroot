@@ -122,29 +122,6 @@ SETTINGS index_granularity=8192, ttl_only_drop_parts = 1`,
 ALTER TABLE otel_traces ADD COLUMN IF NOT EXISTS NetSockPeerAddr LowCardinality(String) 
 MATERIALIZED concat(SpanAttributes['net.peer.name'], ':', SpanAttributes['net.peer.port']) CODEC(ZSTD(1))`,
 
-		// 新建表 otel_traces_trace_id_ts。
-		`
-CREATE TABLE IF NOT EXISTS otel_traces_trace_id_ts (
-     TraceId String CODEC(ZSTD(1)),
-     Start DateTime64(9) CODEC(Delta, ZSTD(1)),
-     End DateTime64(9) CODEC(Delta, ZSTD(1)),
-     INDEX idx_trace_id TraceId TYPE bloom_filter(0.01) GRANULARITY 1
-) ENGINE MergeTree()
-TTL toDateTime(Start) + toIntervalDay(@ttl_days)
-ORDER BY (toUnixTimestamp(Start))
-SETTINGS index_granularity=8192`,
-
-		// 新建物化视图 otel_traces_trace_id_ts_mv，为 otel_traces_trace_id_ts 维护 min/max range。
-		`
-CREATE MATERIALIZED VIEW IF NOT EXISTS otel_traces_trace_id_ts_mv TO otel_traces_trace_id_ts AS
-SELECT 
-	TraceId,
-	min(Timestamp) as Start,
-	max(Timestamp) as End
-FROM otel_traces
-WHERE TraceId!=''
-GROUP BY TraceId`,
-
 		// 新建表 l7_events_ss。
 		`
 CREATE TABLE IF NOT EXISTS l7_events_ss (
