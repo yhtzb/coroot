@@ -46,7 +46,7 @@ func Render(ctx context.Context, ch *clickhouse.Client, w *model.World, view, qu
 		v.Nodes = renderNodes(w)
 	case "deployments":
 		v.Deployments = renderDeployments(w)
-	case "traces":
+	case "traces": // ONLY for otel traces
 		v.Traces = renderTraces(ctx, ch, w, query)
 	case "costs":
 		v.Costs = renderCosts(w)
