@@ -18,7 +18,7 @@ type Application struct {
 	Instances       []*Instance
 	instancesByName map[string][]*Instance
 
-	Downstreams []*Connection
+	Downstreams []*Connection // downstream stands for client-side service of current service
 
 	DesiredInstances *timeseries.TimeSeries
 

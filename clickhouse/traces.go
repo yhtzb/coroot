@@ -698,7 +698,7 @@ func (q SpanQuery) DurationFilter() (string, []any) {
 func (q SpanQuery) RootSpansFilter() ([]string, []any) {
 	filter := []string{
 		"ParentSpanId = ''",
-		"NOT startsWith(ServiceName, '/')",
+		// "TraceId = SpanId", // 局限于 eBPF agent spans
 	}
 	for _, f := range q.Filters {
 		filter = append(filter, f.String())
@@ -711,9 +711,10 @@ func (q SpanQuery) RootSpansFilter() ([]string, []any) {
 	return filter, args
 }
 
+// SpansByServiceNameFilter 被 TraceSourceOtel 使用。
 func (q SpanQuery) SpansByServiceNameFilter() ([]string, []any) {
 	filter := []string{
-		"SpanKind = 'SPAN_KIND_SERVER'", // SPAN_KIND_SERVER 无法来自 eBPF Agent。
+		"SpanKind = 'SPAN_KIND_SERVER'", // SPAN_KIND_SERVER 无法来自 eBPF agent。
 	}
 	for _, f := range q.Filters {
 		filter = append(filter, f.String())
@@ -740,6 +741,7 @@ func inboundSpansFilter(clients []string, listens []model.Listen) ([]string, []a
 	filter := []string{
 		"ServiceName IN (@services)",
 		"(SpanAttributes['net.peer.name'] IN (@ips) OR NetSockPeerAddr IN (@addrs))",
+		// 可以加一个 SPAN_KIND_CLIENT 加速。
 	}
 	args := []any{
 		clickhouse.Named("services", clients),

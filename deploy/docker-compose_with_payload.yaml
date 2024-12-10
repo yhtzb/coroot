@@ -13,7 +13,7 @@ volumes:
 services:
   coroot:
     restart: always
-    image: registry.cn-beijing.aliyuncs.com/obser/coroot:debug
+    image: registry.cn-beijing.aliyuncs.com/obser/coroot:latest
     volumes:
       - /D/tmp/coroot/coroot_data:/data
     ports:
@@ -49,6 +49,8 @@ services:
   coroot-tracing-algo:
     restart: always
     image: registry.cn-beijing.aliyuncs.com/obser/coroot-tracing-algo:latest
+    environment:
+      COROOT_CLICKHOUSE_ADDRESS: clickhouse:8123
     ports:
       - '127.0.0.1:4200:4200'
     depends_on:

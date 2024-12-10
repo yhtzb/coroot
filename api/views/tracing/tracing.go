@@ -66,6 +66,7 @@ func Render(ctx context.Context, ch *clickhouse.Client, app *model.Application, 
 		return nil
 	}
 
+	// 解析 GET 参数，典型值是 "?trace=agent%3A%3A-%3A-%3A"，也就是 "agent::-:-:"。
 	parts := strings.Split(q.Get("trace")+"::::", ":")
 	source, traceId, tsRange, durRange := model.TraceSource(parts[0]), parts[1], parts[2], parts[3]
 	parts = strings.Split(tsRange+"-", "-")
@@ -321,7 +322,7 @@ func getClientsByParentSpans(spans []*model.TraceSpan, parentSpans []*model.Trac
 	for _, s := range spans {
 		k := spanKey{traceId: s.TraceId, spanId: s.SpanId}
 		res[k] = serviceNames[spanKey{traceId: s.TraceId, spanId: s.ParentSpanId}]
-		addr := fmt.Sprintf("%s:%d", s.SpanAttributes["net.peer.name"], s.SpanAttributes["net.peer.port"])
+		addr := fmt.Sprintf("%s:%s", s.SpanAttributes["net.peer.name"], s.SpanAttributes["net.peer.port"])
 		if res[k] == "" {
 			res[k] = appByPodIp[addr].Name
 		}
