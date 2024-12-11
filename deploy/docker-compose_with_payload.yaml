@@ -2,14 +2,6 @@ version: '3.8'
 
 name: localhost
 
-volumes:
-  prometheus_data: { }
-  clickhouse_data: { }
-  clickhouse_logs: { }
-  coroot_data: { }
-  node_agent_data: { }
-  cluster_agent_data: { }
-
 services:
   coroot:
     restart: always
@@ -17,8 +9,8 @@ services:
     volumes:
       - /D/tmp/coroot/coroot_data:/data
     ports:
-      - '127.0.0.1:8888:8888'  # This port is used as: Web UI, OTel collector.
-      - '127.0.0.1:40000:40000' # For DLV
+      - "8888:8888"  # This port is used as: Web UI, OTel collector.
+      - "40000:40000" # For DLV
     command:
       - '--data-dir=/data'
       - '--bootstrap-prometheus-url=http://prometheus:9090'
@@ -52,7 +44,7 @@ services:
     environment:
       COROOT_CLICKHOUSE_ADDRESS: clickhouse:8123
     ports:
-      - '127.0.0.1:4200:4200'
+      - "4200:4200"
     depends_on:
       - clickhouse
 
@@ -60,7 +52,7 @@ services:
     restart: always
     image: prom/prometheus:v2.45.4
     volumes:
-      - /D/tmp/coroot/prometheus_data:/prometheus
+      - /D/tmp/coroot/prometheus_data:/prometheus  # chmod 777 -R
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -69,7 +61,7 @@ services:
       - '--web.enable-lifecycle'
       - '--web.enable-remote-write-receiver'
     ports:
-      - '127.0.0.1:9090:9090'
+      - "9090:9090"
 
   clickhouse:
     restart: always
@@ -78,8 +70,8 @@ services:
       - /D/tmp/coroot/clickhouse_data:/var/lib/clickhouse
       - /D/tmp/coroot/clickhouse_logs:/var/log/clickhouse-server
     ports:
-      - '127.0.0.1:9000:9000'
-      - '127.0.0.1:8123:8123'
+      - "9000:9000"
+      - "8123:8123"
     ulimits:
       nofile:
         soft: 262144
@@ -89,19 +81,21 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.6
     ports:
-      - 16686:16686
+      - "16686:16686"
 
   redis:
     image: registry.cn-beijing.aliyuncs.com/obser/redis:4.0.9
     environment:
       ALLOW_EMPTY_PASSWORD: 'yes'
+    ports:
+      - "6379:6379"
 
   foo-svc:
     image: registry.cn-beijing.aliyuncs.com/obser/foo-svc:0.1.0
     environment:
       JAEGER_UDP_SENDER_HOST: jaeger
     ports:
-      - 8080:8080
+      - "8080:8080"
     links:
       - redis
       - jaeger
