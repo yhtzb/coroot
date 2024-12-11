@@ -170,47 +170,6 @@ SETTINGS index_granularity=8192, ttl_only_drop_parts = 1`,
 ALTER TABLE otel_traces ADD COLUMN IF NOT EXISTS NetSockPeerAddr LowCardinality(String) 
 MATERIALIZED concat(SpanAttributes['net.peer.name'], ':', SpanAttributes['net.peer.port']) CODEC(ZSTD(1))`,
 
-		// 新建表 otel_traces_trace_id_ts。
-		`
-CREATE TABLE IF NOT EXISTS otel_traces_trace_id_ts @on_cluster (
-     TraceId String CODEC(ZSTD(1)),
-     Start DateTime64(9) CODEC(Delta, ZSTD(1)),
-     End DateTime64(9) CODEC(Delta, ZSTD(1)),
-     INDEX idx_trace_id TraceId TYPE bloom_filter(0.01) GRANULARITY 1
-) ENGINE @merge_tree
-TTL toDateTime(Start) + toIntervalDay(@ttl_days)
-ORDER BY (toUnixTimestamp(Start))
-SETTINGS index_granularity=8192`,
-
-		// 新建物化视图 otel_traces_trace_id_ts_mv，为 otel_traces_trace_id_ts 维护 min/max range。
-		`
-CREATE MATERIALIZED VIEW IF NOT EXISTS otel_traces_trace_id_ts_mv @on_cluster TO otel_traces_trace_id_ts AS
-SELECT 
-	TraceId,
-	min(Timestamp) as Start,
-	max(Timestamp) as End
-FROM otel_traces
-WHERE TraceId!=''
-GROUP BY TraceId`,
-
-		// 物化列 NetSockPeerAddr 从 SpanAttributes 中提取。
-		`ALTER TABLE otel_traces @on_cluster ADD COLUMN IF NOT EXISTS NetSockPeerAddr LowCardinality(String) MATERIALIZED SpanAttributes['net.sock.peer.addr'] CODEC(ZSTD(1))`,
-
-		// 新建 l7_events_ss 表
-		`
-CREATE TABLE IF NOT EXISTS l7_events_ss @on_cluster (
-     Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
-     Duration Int64 CODEC(ZSTD(1)),
-     ContainerId LowCardinality(String) CODEC(ZSTD(1)),
-     TgidRead LowCardinality(String) CODEC(ZSTD(1)),
-     TgidWrite LowCardinality(String) CODEC(ZSTD(1)),
-     StatementId UInt32 CODEC(ZSTD(1))
-    )
-ENGINE MergeTree()
-TTL toDateTime(Timestamp) + toIntervalDay(@ttl_days)
-PARTITION BY toDate(Timestamp)
-ORDER BY (toUnixTimestamp(Timestamp))`,
-
 		// 新建表 profiling_stacks。
 		`
 CREATE TABLE IF NOT EXISTS profiling_stacks @on_cluster (
@@ -265,9 +224,6 @@ SELECT ServiceName, Type, max(End) AS LastSeen FROM profiling_samples group by S
 		`CREATE TABLE IF NOT EXISTS otel_traces_distributed ON CLUSTER @cluster AS otel_traces
 			ENGINE = Distributed(@cluster, currentDatabase(), otel_traces, cityHash64(TraceId))`,
 
-		`CREATE TABLE IF NOT EXISTS otel_traces_trace_id_ts_distributed ON CLUSTER @cluster AS otel_traces_trace_id_ts
-			ENGINE = Distributed(@cluster, currentDatabase(), otel_traces_trace_id_ts)`,
-
 		`CREATE TABLE IF NOT EXISTS profiling_stacks_distributed ON CLUSTER @cluster AS profiling_stacks
 		ENGINE = Distributed(@cluster, currentDatabase(), profiling_stacks, Hash)`,
 
@@ -280,7 +236,6 @@ SELECT ServiceName, Type, max(End) AS LastSeen FROM profiling_samples group by S
 )
 
 func ReplaceTables(query string, distributed bool) string {
-	tbls := []string{"otel_logs", "otel_traces", "otel_traces_trace_id_ts", "profiling_stacks", "profiling_samples", "profiling_profiles"}
 	for _, t := range tbls {
 		placeholder := "@@table_" + t + "@@"
 		if distributed {
