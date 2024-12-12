@@ -20,7 +20,7 @@ services:
       - clickhouse
       - prometheus
 
-  coroot-node-agent:
+  node-agent:
     restart: always
     image: registry.cn-beijing.aliyuncs.com/obser/coroot-node-agent:latest
     privileged: true
@@ -37,12 +37,25 @@ services:
       - '--wal-dir=/data'
     depends_on:
       - clickhouse
+      - coroot
+
+  cluster-agent:
+    restart: always
+    image: registry.cn-beijing.aliyuncs.com/obser/coroot-cluster-agent:latest
+    volumes:
+      - /D/tmp/coroot/cluster_agent_data:/data
+    command:
+      - '--coroot-url=http://coroot:8888'
+      - '--metrics-scrape-interval=15s'
+      - '--metrics-wal-dir=/data'
+    depends_on:
+      - coroot
 
   coroot-tracing-algo:
     restart: always
     image: registry.cn-beijing.aliyuncs.com/obser/coroot-tracing-algo:latest
     environment:
-      COROOT_CLICKHOUSE_ADDRESS: clickhouse:8123
+      COROOT_CLICKHOUSE_ADDRESS: "clickhouse:8123"
     ports:
       - "4200:4200"
     depends_on:

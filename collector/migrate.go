@@ -236,6 +236,7 @@ SELECT ServiceName, Type, max(End) AS LastSeen FROM profiling_samples group by S
 )
 
 func ReplaceTables(query string, distributed bool) string {
+	tbls := []string{"otel_logs", "otel_traces", "profiling_stacks", "profiling_samples", "profiling_profiles"}
 	for _, t := range tbls {
 		placeholder := "@@table_" + t + "@@"
 		if distributed {
