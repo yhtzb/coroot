@@ -13,8 +13,12 @@ import (
 
 const (
 	ttlDays = "7"
+	// short time cache
+	ttlHours = "2"
 )
 
+// 使用 Clickhouse 集群环境的条件：1.存在 system.zookeeper 配置。2.集群名称为 coroot 或者 default。
+// 单机环境下，可能 SHOW CLUSTERS 返回 default，但是 EXISTS system.zookeeper 返回 0。
 func getCluster(ctx context.Context, chPool *chpool.Pool) (string, error) {
 	var exists chproto.ColUInt8
 	q := ch.Query{Body: "EXISTS system.zookeeper", Result: chproto.Results{{Name: "result", Data: &exists}}}
@@ -57,6 +61,7 @@ func getCluster(ctx context.Context, chPool *chpool.Pool) (string, error) {
 func (c *Collector) migrate(ctx context.Context, client *chClient) error {
 	for _, t := range tables {
 		t = strings.ReplaceAll(t, "@ttl_days", ttlDays)
+		t = strings.ReplaceAll(t, "@ttl_hours", ttlHours)
 		if client.cluster != "" {
 			t = strings.ReplaceAll(t, "@on_cluster", "ON CLUSTER "+client.cluster)
 			t = strings.ReplaceAll(t, "@merge_tree", "ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}/{table}', '{replica}')")
@@ -170,6 +175,20 @@ SETTINGS index_granularity=8192, ttl_only_drop_parts = 1`,
 ALTER TABLE otel_traces ADD COLUMN IF NOT EXISTS NetSockPeerAddr LowCardinality(String) 
 MATERIALIZED concat(SpanAttributes['net.peer.name'], ':', SpanAttributes['net.peer.port']) CODEC(ZSTD(1))`,
 
+		// 新建 ebpf_ss_events 表
+		`
+CREATE TABLE IF NOT EXISTS ebpf_ss_events @on_cluster (
+     Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
+     Duration Int64 CODEC(ZSTD(1)),
+     ContainerId LowCardinality(String) CODEC(ZSTD(1)),
+     TgidRead LowCardinality(String) CODEC(ZSTD(1)),
+     TgidWrite LowCardinality(String) CODEC(ZSTD(1)),
+     StatementId UInt32 CODEC(ZSTD(1))
+) ENGINE @merge_tree
+TTL toDateTime(Timestamp) + toIntervalHour(@ttl_hours)
+PARTITION BY toDate(Timestamp)
+ORDER BY (toUnixTimestamp(Timestamp))`,
+
 		// 新建表 profiling_stacks。
 		`
 CREATE TABLE IF NOT EXISTS profiling_stacks @on_cluster (
@@ -224,6 +243,9 @@ SELECT ServiceName, Type, max(End) AS LastSeen FROM profiling_samples group by S
 		`CREATE TABLE IF NOT EXISTS otel_traces_distributed ON CLUSTER @cluster AS otel_traces
 			ENGINE = Distributed(@cluster, currentDatabase(), otel_traces, cityHash64(TraceId))`,
 
+		`CREATE TABLE IF NOT EXISTS ebpf_ss_events_distributed ON CLUSTER @cluster AS ebpf_ss_events
+			ENGINE = Distributed(@cluster, currentDatabase(), ebpf_ss_events)`,
+
 		`CREATE TABLE IF NOT EXISTS profiling_stacks_distributed ON CLUSTER @cluster AS profiling_stacks
 		ENGINE = Distributed(@cluster, currentDatabase(), profiling_stacks, Hash)`,
 
@@ -236,7 +258,7 @@ SELECT ServiceName, Type, max(End) AS LastSeen FROM profiling_samples group by S
 )
 
 func ReplaceTables(query string, distributed bool) string {
-	tbls := []string{"otel_logs", "otel_traces", "profiling_stacks", "profiling_samples", "profiling_profiles"}
+	tbls := []string{"otel_logs", "otel_traces", "ebpf_ss_events", "profiling_stacks", "profiling_samples", "profiling_profiles"}
 	for _, t := range tbls {
 		placeholder := "@@table_" + t + "@@"
 		if distributed {
