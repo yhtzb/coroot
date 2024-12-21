@@ -1,13 +1,33 @@
+COROOT_VERSION ?= latest
 UI_PATH = front
 
 .PHONY: all
-all: lint test
+all: lint build test
 
 .PHONY: lint
 lint: go-lint ui-lint
 
+.PHONY: build
+build: npm-build go-build
+
+.PHONY: build-fast
+build-fast: go-build
+
 .PHONY: test
 test: go-test
+
+##### Basics
+.PHONY: docker
+docker: npm-build
+	docker build --build-arg VERSION=$(COROOT_VERSION) -t registry.cn-beijing.aliyuncs.com/obser/coroot:$(COROOT_VERSION) .
+
+.PHONY: docker.debug
+docker.debug:
+	docker build -f Dockerfile.debug -t registry.cn-beijing.aliyuncs.com/obser/coroot:debug .
+
+.PHONY: go-build
+go-build:
+	go build -mod=readonly -ldflags "-X main.version=$(COROOT_VERSION)" -o coroot .
 
 .PHONY: go-lint
 go-lint: go-mod go-vet go-fmt go-imports
@@ -51,12 +71,3 @@ npm-fmt:
 .PHONY: npm-build
 npm-build:
 	cd $(UI_PATH) && npm run build-prod
-
-.PHONY: docker
-#docker: npm-build # 暂时不改前端，所以不需要重新构建
-docker:
-	docker build . -t registry.cn-beijing.aliyuncs.com/obser/coroot:latest
-
-.PHONY: docker.debug
-docker.debug:
-	docker build . -f Dockerfile.debug -t registry.cn-beijing.aliyuncs.com/obser/coroot:debug

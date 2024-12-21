@@ -6,7 +6,7 @@ COPY go.sum .
 RUN export GOPROXY='https://goproxy.cn' && go mod download
 COPY . .
 ARG VERSION=latest
-RUN go build -mod=readonly -ldflags "-X main.version=$VERSION" -o coroot .
+RUN export COROOT_VERSION=$VERSION && make go-build
 
 
 FROM debian:bullseye

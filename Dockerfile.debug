@@ -5,8 +5,7 @@ COPY go.mod .
 COPY go.sum .
 RUN export GOPROXY='https://goproxy.cn' && go mod download
 COPY . .
-ARG VERSION=latest
-RUN go build -mod=readonly -ldflags "-X main.version=$VERSION" -gcflags "all=-N -l" -o coroot
+RUN go build -mod=readonly -ldflags "-X main.version=debug" -gcflags "all=-N -l" -o coroot
 
 
 FROM golang:1.23-bullseye AS downloader
