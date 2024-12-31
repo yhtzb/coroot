@@ -245,7 +245,7 @@
                             <th>Root Service</th>
                             <th>Name</th>
                             <th>Status</th>
-                            <th>Duration</th>
+                            <th>Duration<v-icon icon="mdi-arrow-down" size="16" style="cursor: pointer;" @click="sortDuration"></v-icon></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -253,7 +253,7 @@
                             <td>
                                 <router-link :to="openTrace(s.trace_id)" exact class="text-no-wrap">
                                     <v-icon small style="vertical-align: baseline">mdi-chart-timeline</v-icon>
-                                    {{ s.trace_id.substring(0, 8) }}
+                                    {{ s.trace_id.substring(0, 16) }}
                                 </router-link>
                             </td>
                             <td class="text-no-wrap">{{ s.service }}</td>
@@ -417,6 +417,8 @@ export default {
             },
             loading: false,
             error: '',
+            isSort: false,
+            noSortList: []
         };
     },
 
@@ -494,6 +496,16 @@ export default {
     },
 
     methods: {
+        sortDuration() {
+          if(!this.isSort) {
+             this.noSortList = this.view.traces
+             this.view.traces.sort((a,b) => b.duration - a.duration)
+             this.isSort = true
+          } else {
+              this.view.traces = this.noSortList
+              this.isSort = false
+          }
+      },
         get() {
             const query = this.$route.query.query || '';
             this.loading = true;

@@ -59,7 +59,7 @@
                         <th>Trace ID</th>
                         <th>Client</th>
                         <th>Status</th>
-                        <th>Duration</th>
+                        <th>Duration<v-icon icon="mdi-arrow-down" size="16" style="cursor: pointer;" @click="sortDuration"></v-icon></th>
                         <th>Name</th>
                         <th>Details</th>
                     </tr>
@@ -69,7 +69,7 @@
                         <td>
                             <router-link :to="{ query: setTrace({ id: s.trace_id, span: s.id }) }" exact class="text-no-wrap">
                                 <v-icon small style="vertical-align: baseline">mdi-chart-timeline</v-icon>
-                                {{ s.trace_id.substring(0, 8) }}
+                                {{ s.trace_id.substring(0, 16) }}
                             </router-link>
                         </td>
                         <td class="text-no-wrap">{{ s.client }}</td>
@@ -157,6 +157,8 @@ export default {
             saving: false,
             error: '',
             message: '',
+            isSort: false,
+            noSortList: []
         };
     },
 
@@ -233,6 +235,16 @@ export default {
     },
 
     methods: {
+        sortDuration() {
+          if(!this.isSort) {
+             this.noSortList = this.view.spans
+             this.view.spans.sort((a,b) => b.duration - a.duration)
+             this.isSort = true
+          } else {
+              this.view.spans = this.noSortList
+              this.isSort = false
+          }
+        },
         setTrace(t, ctx) {
             t = { ...this.trace, ...t };
             const trace = `${t.type}:${t.id}:${t.tsRange}:${t.durRange}:${t.span}`;
